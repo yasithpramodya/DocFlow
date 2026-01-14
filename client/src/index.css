@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+
+@layer base {
+  body {
+    --color-primary: #0f172a; /* slate-900 */
+    --color-primary-hover: #1e293b; /* slate-800 */
+    @apply bg-gray-50 text-slate-900 font-sans antialiased;
+  }
+}
+
+@theme {
+  --color-primary: #0f172a;
+  --color-primary-hover: #1e293b;
+  --color-accent: #3b82f6;
+  --font-sans: Inter, sans-serif;
+}
+
+.btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-colors duration-200;
+}
+
+.btn-primary {
+    @apply bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)];
+}
+
+.input-field {
+    @apply w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] outline-none transition-all bg-gray-50;
+}
