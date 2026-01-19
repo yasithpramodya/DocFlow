@@ -8,7 +8,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: CLIENT_URL
-        value: https://document-flow.onrender.com
+        value: https://docflow-backend-ul5m.onrender.com
       - key: MONGODB_URI
         sync: false
       - key: JWT_SECRET
