@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Mail, Lock, Loader2 } from 'lucide-react';
 
@@ -9,17 +9,13 @@ const Login = () => {
         password: ''
     });
     const [loading, setLoading] = useState(false);
-    const { login, error, clearError } = useAuth();
+    const [loginError, setLoginError] = useState('');
+    const { login } = useAuth();
     const navigate = useNavigate();
-    const location = useLocation();
-
-
 
     useEffect(() => {
-        // Clear any previous errors from AuthContext when component mounts
-        if (error) {
-            clearError();
-        }
+        // No global error to clear, just ensure local is empty
+        setLoginError('');
     }, []);
 
     const handleChange = (e) => {
@@ -28,17 +24,17 @@ const Login = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        clearError(); // Clear any existing errors before attempting login
+        setLoginError(''); 
         setLoading(true);
         try {
             const success = await login(formData.email, formData.password);
             if (success) {
                 navigate('/dashboard');
             } else {
-                setError('Login failed');
+                setLoginError('Login failed. Please check your credentials.');
             }
         } catch (err) {
-            setError(err.response?.data?.error || 'Login failed');
+            setLoginError(err.response?.data?.error || 'Login failed');
         } finally {
             setLoading(false);
         }
@@ -57,9 +53,9 @@ const Login = () => {
                     <p className="text-gray-500 text-sm mt-2">Sign in to continue</p>
                 </div>
 
-                {error && (
+                {loginError && (
                     <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm text-center">
-                        {error}
+                        {loginError}
                     </div>
                 )}
 
@@ -98,6 +94,12 @@ const Login = () => {
                         </div>
                     </div>
 
+                    <div className="flex items-center justify-end">
+                        <Link to="/forgot-password" className="text-xs font-medium text-primary hover:text-blue-700">
+                            Forgot password?
+                        </Link>
+                    </div>
+
                     <button
                         type="submit"
                         disabled={loading}
@@ -107,13 +109,19 @@ const Login = () => {
                     </button>
                 </form>
 
-                <div className="mt-6 flex items-center justify-between text-sm text-gray-500">
-                    <Link to="#" className="hover:text-primary">Forgot password?</Link>
-                    <div className="flex gap-1">
-                        <span>Need an account?</span>
-                        <Link to="/signup" className="text-primary font-medium hover:underline">Sign up</Link>
-                    </div>
+                <div className="mt-8 pt-6 border-t border-gray-100">
+                    <p className="text-center text-sm text-gray-500 mb-4">Don't have an account yet?</p>
+                    <Link 
+                        to="/signup" 
+                        className="w-full block text-center py-2.5 px-4 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                        Create an account
+                    </Link>
                 </div>
+            </div>
+            
+            <div className="absolute top-8 right-8">
+                 {/* Optional: Add Help or About links here */}
             </div>
         </div>
     );

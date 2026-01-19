@@ -33,6 +33,7 @@ const Dashboard = () => {
 
     useEffect(() => {
         fetchDocuments();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab]);
 
     const fetchDocuments = async () => {
@@ -56,6 +57,7 @@ const Dashboard = () => {
         switch (status) {
             case 'Approved': return 'bg-green-100 text-green-800 border-green-200';
             case 'Rejected': return 'bg-red-100 text-red-800 border-red-200';
+            case 'Accepted': return 'bg-blue-100 text-blue-800 border-blue-200';
             case 'Pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
             default: return 'bg-gray-100 text-gray-800 border-gray-200';
         }
@@ -83,7 +85,7 @@ const Dashboard = () => {
                         <div className="bg-blue-600 p-2 rounded-lg">
                             <FileText className="w-6 h-6 text-white" />
                         </div>
-                        <span>DocFlow</span>
+                        <span>DocFlow RUSL</span>
                     </div>
                 </div>
 

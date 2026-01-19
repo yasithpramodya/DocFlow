@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const nodemailer = require('nodemailer');
+const crypto = require('crypto');
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -119,6 +120,99 @@ exports.verifyEmail = async (req, res, next) => {
         user.isVerified = true;
         user.otp = undefined;
         user.otpExpire = undefined;
+        await user.save();
+
+        sendTokenResponse(user, 200, res);
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+};
+
+// @desc    Forgot Password
+// @route   POST /api/auth/forgotpassword
+// @access  Public
+exports.forgotPassword = async (req, res, next) => {
+    try {
+        console.log(`[ForgotPassword] Request for: ${req.body.email}`);
+        const user = await User.findOne({ email: req.body.email });
+
+        if (!user) {
+            console.log(`[ForgotPassword] User not found: ${req.body.email}`);
+            return res.status(404).json({ success: false, error: 'There is no user with that email' });
+        }
+
+        // Get reset token
+        const resetToken = user.getResetPasswordToken();
+
+        await user.save({ validateBeforeSave: false });
+
+        // Create reset URL
+        const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
+        
+        console.log(`[ForgotPassword] Reset URL generated: ${resetUrl}`);
+
+        try {
+            const transporter = nodemailer.createTransport({
+                host: process.env.EMAIL_HOST,
+                port: process.env.EMAIL_PORT,
+                secure: false, 
+                auth: {
+                    user: process.env.EMAIL_USER,
+                    pass: process.env.EMAIL_PASSWORD.replace(/\s+/g, '')
+                }
+            });
+
+            const message = {
+                from: process.env.EMAIL_FROM,
+                to: user.email,
+                subject: 'DocumentFlow Pro - Password Reset',
+                text: `You represent receiving this email because you (or someone else) have requested the reset of a password. Please make a PUT request to: \n\n ${resetUrl}`
+            };
+
+            await transporter.sendMail(message);
+            console.log(`[ForgotPassword] Email sent to: ${user.email}`);
+
+            res.status(200).json({ success: true, data: 'Email sent', resetUrl: process.env.NODE_ENV === 'development' ? resetUrl : undefined });
+        } catch (err) {
+            console.error(`[ForgotPassword] Email send error:`, err);
+            user.resetPasswordToken = undefined;
+            user.resetPasswordExpire = undefined;
+
+            await user.save({ validateBeforeSave: false });
+
+            return res.status(500).json({ success: false, error: 'Email could not be sent' });
+        }
+    } catch (err) {
+        console.error(`[ForgotPassword] Error:`, err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+};
+
+// @desc    Reset Password
+// @route   PUT /api/auth/resetpassword/:resettoken
+// @access  Public
+exports.resetPassword = async (req, res, next) => {
+    try {
+        // Get hashed token
+        const resetPasswordToken = crypto
+            .createHash('sha256')
+            .update(req.params.resettoken)
+            .digest('hex');
+
+        const user = await User.findOne({
+            resetPasswordToken,
+            resetPasswordExpire: { $gt: Date.now() }
+        });
+
+        if (!user) {
+            return res.status(400).json({ success: false, error: 'Invalid token' });
+        }
+
+        // Set new password
+        user.password = req.body.password;
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpire = undefined;
+
         await user.save();
 
         sendTokenResponse(user, 200, res);

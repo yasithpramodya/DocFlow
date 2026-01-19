@@ -7,6 +7,8 @@ import VerifyEmail from './pages/VerifyEmail';
 import Dashboard from './pages/Dashboard';
 import RegisterDocument from './pages/RegisterDocument';
 import TrackDocument from './pages/TrackDocument';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 const ProtectedRoute = ({ children }) => {
     const { user, loading } = useAuth();
@@ -49,11 +51,18 @@ function App() {
                         </PublicRoute>
                     } />
                     <Route path="/verify-email" element={
-                        <PublicRoute> // Actually this might need to be accessible if logged in but not verified? 
-                            {/* Complex case: if logged in but not verified, we should show this.
-                                But our login logic prevents login if not verified.
-                                So this page is strictly for the flow after signup. */}
+                        <PublicRoute>
                             <VerifyEmail />
+                        </PublicRoute>
+                    } />
+                    <Route path="/forgot-password" element={
+                        <PublicRoute>
+                            <ForgotPassword />
+                        </PublicRoute>
+                    } />
+                    <Route path="/reset-password/:resetToken" element={
+                        <PublicRoute>
+                            <ResetPassword />
                         </PublicRoute>
                     } />
                     

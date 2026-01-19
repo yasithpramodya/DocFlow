@@ -10,7 +10,7 @@ const VerifyEmail = () => {
     const { verifyEmail } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
-    const [email, setEmail] = useState(location.state?.email || localStorage.getItem('registrationEmail') || '');
+    const [email] = useState(location.state?.email || localStorage.getItem('registrationEmail') || '');
 
     const handleSubmit = async (e) => {
         e.preventDefault();

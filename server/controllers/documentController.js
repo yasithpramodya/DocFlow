@@ -42,14 +42,20 @@ exports.createDocument = async (req, res) => {
     }
 };
 
-// @desc    Get documents sent by me (Outbox)
+// @desc    Get documents sent or handled by me (Outbox)
 // @route   GET /api/documents/sent
 // @access  Private
 exports.getSentDocuments = async (req, res) => {
     try {
-        const documents = await Document.find({ sender: req.user.id })
-            .populate('receiver', 'email name')
-            .sort({ createdAt: -1 });
+        const documents = await Document.find({
+            $or: [
+                { sender: req.user.id },
+                { "history.updatedBy": req.user.id }
+            ]
+        })
+        .populate('sender', 'email name')
+        .populate('receiver', 'email name')
+        .sort({ createdAt: -1 });
 
         res.status(200).json({ success: true, count: documents.length, data: documents });
     } catch (err) {
@@ -64,6 +70,7 @@ exports.getReceivedDocuments = async (req, res) => {
     try {
         const documents = await Document.find({ receiver: req.user.id })
             .populate('sender', 'email name')
+            .populate('receiver', 'email name')
             .sort({ createdAt: -1 });
 
         res.status(200).json({ success: true, count: documents.length, data: documents });
@@ -75,32 +82,36 @@ exports.getReceivedDocuments = async (req, res) => {
 // @desc    Get single document
 // @route   GET /api/documents/:id
 // @access  Private
-exports.getDocument = async (req, res) => {
+exports.getDocument = async (req, res, next) => {
     try {
         const document = await Document.findById(req.params.id)
-            .populate('sender', 'email name')
-            .populate('receiver', 'email name')
-            .populate('history.updatedBy', 'email name');
+            .populate('sender', 'name email department')
+            .populate('receiver', 'name email department')
+            .populate('history.updatedBy', 'name email department');
 
         if (!document) {
             return res.status(404).json({ success: false, error: 'Document not found' });
         }
 
-        // Ensure user is related to document
-        if (document.sender.toString() !== req.user.id && document.receiver.toString() !== req.user.id) {
-            return res.status(401).json({ success: false, error: 'Not authorized' });
+        // Access Control: Sender, Receiver, OR anyone in the history
+        const isSender = document.sender && document.sender._id.toString() === req.user.id.toString();
+        const isReceiver = document.receiver && document.receiver._id.toString() === req.user.id.toString();
+        const isInHistory = document.history.some(h => h.updatedBy && h.updatedBy._id && h.updatedBy._id.toString() === req.user.id.toString());
+
+        if (!isSender && !isReceiver && !isInHistory) {
+            return res.status(401).json({ success: false, error: 'Not authorized to view this document' });
         }
 
         res.status(200).json({ success: true, data: document });
     } catch (err) {
-        res.status(400).json({ success: false, error: err.message });
+        res.status(500).json({ success: false, error: err.message });
     }
 };
 
 // @desc    Update document status
 // @route   PUT /api/documents/:id/status
 // @access  Private
-exports.updateStatus = async (req, res) => {
+exports.updateStatus = async (req, res, next) => {
     try {
         const { status, comment } = req.body;
         const document = await Document.findById(req.params.id);
@@ -109,23 +120,65 @@ exports.updateStatus = async (req, res) => {
             return res.status(404).json({ success: false, error: 'Document not found' });
         }
 
-        // Only receiver can approve/review (or sender depending on flow, but usually receiver acts)
-        // For simplicity, allow receiver to change status
+        // Only receiver can update status
         if (document.receiver.toString() !== req.user.id) {
-             return res.status(401).json({ success: false, error: 'Not authorized to update status' });
+            return res.status(401).json({ success: false, error: 'Not authorized to update this document' });
         }
 
         document.status = status;
         document.history.push({
             status,
             updatedBy: req.user.id,
-            comment: comment || `Status updated to ${status}`
+            comment
         });
 
         await document.save();
 
         res.status(200).json({ success: true, data: document });
     } catch (err) {
-        res.status(400).json({ success: false, error: err.message });
+        res.status(500).json({ success: false, error: err.message });
+    }
+};
+
+// @desc    Forward document
+// @route   PUT /api/documents/:id/forward
+// @access  Private
+exports.forwardDocument = async (req, res, next) => {
+    try {
+        const { receiverEmail, comment } = req.body;
+        const document = await Document.findById(req.params.id);
+
+        if (!document) {
+            return res.status(404).json({ success: false, error: 'Document not found' });
+        }
+
+        // Only current receiver can forward
+        if (document.receiver.toString() !== req.user.id) {
+            return res.status(401).json({ success: false, error: 'Not authorized to forward this document' });
+        }
+
+         const newReceiver = await User.findOne({ email: receiverEmail });
+         if (!newReceiver) {
+             return res.status(404).json({ success: false, error: 'Receiver user not found' });
+         }
+         
+         if (newReceiver._id.toString() === req.user.id) {
+             return res.status(400).json({ success: false, error: 'Cannot forward to yourself' });
+         }
+
+        // Update document
+        document.receiver = newReceiver._id;
+        document.status = 'Pending'; // Reset to Pending for the new receiver
+        document.history.push({
+            status: 'Forwarded',
+            updatedBy: req.user.id,
+            comment: `Forwarded to ${newReceiver.name} (${newReceiver.department}). ${comment || ''}`
+        });
+
+        await document.save();
+
+        res.status(200).json({ success: true, data: document });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
     }
 };

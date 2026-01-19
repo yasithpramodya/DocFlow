@@ -37,7 +37,7 @@ const DocumentSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['Pending', 'Reviewed', 'Approved', 'Rejected'],
+        enum: ['Pending', 'Accepted', 'Reviewed', 'Approved', 'Rejected'],
         default: 'Pending'
     },
     history: [{

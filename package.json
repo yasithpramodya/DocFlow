@@ -1,0 +1,14 @@
+{
+  "name": "document-flow-root",
+  "version": "1.0.0",
+  "description": "Root package for Document Flow application",
+  "scripts": {
+    "setup": "npm install && cd client && npm install && cd ../server && npm install",
+    "build": "cd client && npm run build",
+    "start": "cd server && npm start",
+    "dev": "echo 'Run client and server separately for dev mode or use concurrently'"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

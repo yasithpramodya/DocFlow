@@ -1,8 +1,7 @@
 import axios from './axios';
 
-// Get Inbox (Received Documents)
 export const getInbox = async () => {
-    const response = await axios.get('/documents/inbox');
+    const response = await axios.get('/documents/received');
     return response.data;
 };
 
@@ -27,5 +26,11 @@ export const updateDocumentStatus = async (id, status, comment) => {
 // Get Single Document Detail
 export const getDocument = async (id) => {
     const response = await axios.get(`/documents/${id}`);
+    return response.data;
+};
+
+// Forward Document
+export const forwardDocument = async (id, receiverEmail, comment) => {
+    const response = await axios.put(`/documents/${id}/forward`, { receiverEmail, comment });
     return response.data;
 };
