@@ -2,7 +2,7 @@ services:
   - type: web
     name: document-flow
     env: node
-    buildCommand: npm install && cd client && npm install && npm run build && cd ../server && npm install
+    buildCommand: npm install && cd client && npm install --production=false && npm run build && cd ../server && npm install
     startCommand: npm start
     envVars:
       - key: NODE_ENV
